@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,7 +29,8 @@ public class DocuSignController {
 
     @Autowired
     DocuSignService docuSignService;
-    
+
+    @CrossOrigin
     @PostMapping(value = "/embeddedSending", consumes = {MediaType.APPLICATION_JSON_VALUE,
                                                             MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<Map<String,Object>> createEmbeddedSending(@RequestPart("receipient") String receipient,
@@ -39,6 +41,7 @@ public class DocuSignController {
         return new ResponseEntity<Map<String,Object>>(response, HttpStatus.CREATED);
     }
 
+    @CrossOrigin
     @PostMapping(value = "/embeddedSignning", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String,String>> createEmbeddedSignning(@Valid @RequestBody Receipient receipient, @RequestParam(value="envelopeId") String envelopeId){
         Map<String,String> response = docuSignService.createEmbeddedSignning(envelopeId, receipient);

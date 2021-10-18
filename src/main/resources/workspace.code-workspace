@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "..\\..\\..\\..\\demo"
+		},
+		{
+			"name": "docusign",
+			"path": "..\\..\\.."
+		},
+		{
+			"path": "..\\..\\..\\..\\docusign-angular"
+		}
+	],
+	"settings": {}
+}

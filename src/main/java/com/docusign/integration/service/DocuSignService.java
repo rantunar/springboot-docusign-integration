@@ -31,6 +31,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -78,6 +79,7 @@ public class DocuSignService {
                 doc.setDocumentBase64(base64Doc);
                 doc.setName(signdoc.getName());
                 doc.setDocumentId(String.valueOf(docId));
+                doc.setFileExtension(StringUtils.getFilenameExtension(signdoc.getOriginalFilename()));
                 docs.add(doc);
             }
             // create an envelope to be signed
@@ -116,6 +118,7 @@ public class DocuSignService {
 
 			java.util.List<String> scopes = new ArrayList<String>();
 			scopes.add(OAuth.Scope_SIGNATURE);
+            scopes.add(OAuth.Scope_IMPERSONATION);
 
 			OAuth.OAuthToken oAuthToken = apiClient.requestJWTUserToken(integrationkey, username, scopes, fileContent, 3600);
 			// now that the API client has an OAuth token, let's use it in all
