@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import com.docusign.esign.api.EnvelopesApi;
 import com.docusign.esign.client.ApiClient;
@@ -18,6 +20,7 @@ import com.docusign.esign.model.EnvelopeDefinition;
 import com.docusign.esign.model.EnvelopeSummary;
 import com.docusign.esign.model.RecipientViewRequest;
 import com.docusign.esign.model.Recipients;
+import com.docusign.esign.model.ReturnUrlRequest;
 import com.docusign.esign.model.Signer;
 import com.docusign.esign.model.ViewUrl;
 import com.docusign.integration.dao.Receipient;
@@ -136,7 +139,10 @@ public class DocuSignService {
 			EnvelopesApi envelopesApi = new EnvelopesApi();
 			EnvelopeSummary envelopeSummary = envelopesApi.createEnvelope(accountId, envDef);
 
-			ViewUrl viewUrl = envelopesApi.createSenderView(accountId, envelopeSummary.getEnvelopeId(), null);
+            ReturnUrlRequest returnUrlRequest = new ReturnUrlRequest();
+            returnUrlRequest.setReturnUrl(returnurl);
+
+			ViewUrl viewUrl = envelopesApi.createSenderView(accountId, envelopeSummary.getEnvelopeId(), returnUrlRequest);
             map.put("envelopeId", envelopeSummary.getEnvelopeId());
             map.put("viewUrl", viewUrl.getUrl());
             map.put("documents", docMaps);
@@ -206,5 +212,58 @@ public class DocuSignService {
         ObjectMapper objectMapper = new ObjectMapper();
         list = Arrays.asList(objectMapper.readValue(receipient, Receipient[].class));
         return list;
+    }
+
+    public Map<String,String> checkSignningStatus(String envelopeId, Receipient receipient){
+        Map<String,String> map = null;
+        try{
+            map = new HashMap<>();
+            Resource resource = resourceLoader.getResource("classpath:static/privatekey.txt");
+            File privateKeyFile = resource.getFile();
+            FileInputStream fin = new FileInputStream(privateKeyFile);
+            byte fileContent[] = new byte[(int)privateKeyFile.length()];
+            fin.read(fileContent);
+            fin.close();
+            ApiClient apiClient = new ApiClient(docusignurl);
+
+            // IMPORTANT NOTE:
+			// the first time you ask for a JWT access token, you should grant access by making the following call
+			// get DocuSign OAuth authorization url:
+			//String oauthLoginUrl = apiClient.getJWTUri(IntegratorKey, RedirectURI, OAuthBaseUrl);
+			// open DocuSign OAuth authorization url in the browser, login and grant access
+			//Desktop.getDesktop().browse(URI.create(oauthLoginUrl));
+			// END OF NOTE
+
+			java.util.List<String> scopes = new ArrayList<String>();
+			scopes.add(OAuth.Scope_SIGNATURE);
+
+			OAuth.OAuthToken oAuthToken = apiClient.requestJWTUserToken(integrationkey, username, scopes, fileContent, 3600);
+			// now that the API client has an OAuth token, let's use it in all
+			// DocuSign APIs
+			apiClient.setAccessToken(oAuthToken.getAccessToken(), oAuthToken.getExpiresIn());
+			UserInfo userInfo = apiClient.getUserInfo(oAuthToken.getAccessToken());
+
+			// parse first account's baseUrl
+			// below code required for production, no effect in demo (same
+			// domain)
+			apiClient.setBasePath(userInfo.getAccounts().get(0).getBaseUri() + "/restapi");
+			Configuration.setDefaultApiClient(apiClient);
+			String accountId = userInfo.getAccounts().get(0).getAccountId();
+
+			EnvelopesApi envelopesApi = new EnvelopesApi();
+
+			Recipients receipient2 = envelopesApi.listRecipients(accountId, envelopeId);
+            if(receipient != null){
+                List<String> status = receipient2.getSigners().stream().filter(x -> x.getEmail().equalsIgnoreCase(receipient.getEmailId())).map(x -> x.getStatus()).collect(Collectors.toList());
+                map.put("status", status.get(0));
+            } else {
+                boolean status = receipient2.getSigners().stream().map(x -> x.getStatus()).allMatch(m -> m.equalsIgnoreCase("sent"));
+                map.put("status", status ? "sent":"NA");
+            }
+        }catch(Exception e){
+            map = null;
+            e.printStackTrace();
+        }
+        return map;
     }
 }

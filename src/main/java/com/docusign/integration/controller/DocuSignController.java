@@ -48,4 +48,12 @@ public class DocuSignController {
         if(response == null) return new ResponseEntity<Map<String,String>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         return new ResponseEntity<Map<String,String>>(response, HttpStatus.CREATED);
     }
+
+    @CrossOrigin
+    @PostMapping(value = "/checkSignningStatus", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String,String>> checkSignningStatus(@Valid @RequestBody(required=false) Receipient receipient, @RequestParam(value="envelopeId") String envelopeId){
+        Map<String,String> response = docuSignService.checkSignningStatus(envelopeId, receipient);
+        if(response == null) return new ResponseEntity<Map<String,String>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<Map<String,String>>(response, HttpStatus.OK);
+    }
 }
